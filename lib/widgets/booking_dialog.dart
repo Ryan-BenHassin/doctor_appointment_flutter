@@ -1,0 +1,243 @@
+import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:another_flushbar/flushbar.dart';
+import '../models/doctor.dart';
+import '../services/booking_service.dart';
+import '../providers/user_provider.dart';
+import '../services/auth_service.dart';
+
+class BookingDialog extends StatefulWidget {
+  final Doctor doctor;
+
+  const BookingDialog({
+    Key? key,
+    required this.doctor,
+  }) : super(key: key);
+
+  @override
+  State<BookingDialog> createState() => _BookingDialogState();
+}
+
+class _BookingDialogState extends State<BookingDialog> {
+  final BookingService _bookingService = BookingService();
+  final _authService = AuthService();
+  // Selected date and time
+  DateTime? _selectedDate;
+  String? _selectedTime;
+  
+  // Available dates and times from server
+  Map<DateTime, List<String>> _dateTimeMap = {};
+  List<DateTime> _bookedSlots = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBookedSlots();
+  }
+
+  Future<void> _loadBookedSlots() async {
+    try {
+      _bookedSlots = await _bookingService.fetchDoctorAppointments(widget.doctor.userId);
+      setState(() {});
+    } catch (e) {
+      print('Error loading booked slots: $e');
+    }
+  }
+
+  bool _isDateAvailable(DateTime day) {
+    // Always enable future dates
+    if (day.isBefore(DateTime.now())) {
+      return false;
+    }
+    return true;
+  }
+
+  List<String> _getAvailableTimesForDate(DateTime date) {
+    final allTimes = List.generate(24, (hour) => 
+      '${'$hour'.padLeft(2, '0')}:00'
+    ).where((time) {
+      final [hour, minute] = time.split(':').map(int.parse).toList();
+      final dateTime = DateTime(
+        date.year, 
+        date.month, 
+        date.day, 
+        hour, 
+        minute
+      );
+      
+      // Check if this time slot is booked
+      return !_bookedSlots.any((booked) => 
+        booked.year == dateTime.year &&
+        booked.month == dateTime.month &&
+        booked.day == dateTime.day &&
+        booked.hour == dateTime.hour &&
+        booked.minute == dateTime.minute
+      );
+    }).toList();
+
+    return allTimes;
+  }
+
+  // Convert list of dates into a map of date -> list of times
+  Map<DateTime, List<String>> _createDateTimeMap(List<DateTime> datetimes) {
+    final map = <DateTime, List<String>>{};
+    
+    for (var dt in datetimes) {
+      final localDt = dt.toLocal(); // Convert to local timezone
+      final date = DateTime(localDt.year, localDt.month, localDt.day);
+      final time = '${localDt.hour.toString().padLeft(2, '0')}:${localDt.minute.toString().padLeft(2, '0')}';
+      
+      map.putIfAbsent(date, () => []).add(time);
+    }
+
+    // Sort times for each date
+    map.forEach((_, times) => times.sort());
+    return map;
+  }
+
+  // Check if a date has available times
+  bool _isDateEnabled(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    return _dateTimeMap.containsKey(normalizedDay);
+  }
+
+  // Build the calendar widget
+  Widget _buildCalendar() {
+    return TableCalendar(
+      firstDay: DateTime.now(),
+      lastDay: DateTime.now().add(Duration(days: 365)),
+      focusedDay: _selectedDate ?? DateTime.now(),
+      selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
+      enabledDayPredicate: _isDateAvailable,
+      onDaySelected: (selectedDay, focusedDay) {
+        setState(() {
+          _selectedDate = selectedDay;
+          _selectedTime = null;
+        });
+      },
+      calendarStyle: CalendarStyle(outsideDaysVisible: false),
+      headerStyle: HeaderStyle(
+        formatButtonVisible: false,
+        titleCentered: true,
+      ),
+    );
+  }
+
+  // Build the time dropdown
+  Widget _buildTimeDropdown() {
+    if (_selectedDate == null) return SizedBox.shrink();
+
+    final availableTimes = _getAvailableTimesForDate(_selectedDate!);
+
+    return DropdownButton<String>(
+      isExpanded: true,
+      hint: Text('Select time'),
+      value: _selectedTime,
+      items: availableTimes.map((time) => DropdownMenuItem(
+        value: time,
+        child: Text(time),
+      )).toList(),
+      onChanged: (value) => setState(() => _selectedTime = value),
+    );
+  }
+
+  Future<void> _handleBookingConfirmation() async {
+    if (_selectedDate == null || _selectedTime == null) return;
+
+    try {
+      // Get current user info if not already available
+      if (UserProvider.user == null) {
+        await _authService.getCurrentUser();
+      }
+      
+      if (UserProvider.user == null) {
+        throw Exception('Please login first');
+      }
+
+      // Parse time string
+      final timeParts = _selectedTime!.split(':');
+      final hour = int.parse(timeParts[0]);
+      final minute = int.parse(timeParts[1]);
+
+      // Combine date and time
+      final dateTime = DateTime(
+        _selectedDate!.year,
+        _selectedDate!.month,
+        _selectedDate!.day,
+        hour,
+        minute,
+      );
+
+      final success = await _bookingService.createReservation(
+        doctorId: widget.doctor.userId,
+        dateTime: dateTime
+      );
+
+      if (!mounted) return;
+
+      Navigator.pop(context);
+
+      Flushbar(
+        message: success ? 'Booking confirmed!' : 'Failed to book. Please try again.',
+        duration: Duration(seconds: 3),
+        margin: EdgeInsets.all(8),
+        borderRadius: BorderRadius.circular(8),
+        backgroundColor: success ? Colors.green : Colors.red,
+      ).show(context);
+
+    } catch (e) {
+      print('Error during booking: $e');
+      if (!mounted) return;
+      
+      Flushbar(
+        message: 'Failed to create booking. Please try again.',
+        duration: Duration(seconds: 3),
+        margin: EdgeInsets.all(8),
+        borderRadius: BorderRadius.circular(8),
+        backgroundColor: Colors.red,
+      ).show(context);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Title
+            Text(
+              'Book ${widget.doctor.name}',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            SizedBox(height: 16),
+
+            // Calendar
+            _buildCalendar(),
+            SizedBox(height: 16),
+
+            // Time Dropdown
+            _buildTimeDropdown(),
+
+            // Buttons
+            ButtonBar(
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Cancel'),
+                ),
+                if (_selectedDate != null && _selectedTime != null)
+                  TextButton(
+                    onPressed: _handleBookingConfirmation,
+                    child: Text('Confirm'),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

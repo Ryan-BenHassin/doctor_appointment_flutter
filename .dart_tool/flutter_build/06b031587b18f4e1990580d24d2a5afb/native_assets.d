@@ -1,0 +1,1 @@
+ /Users/Ryan/dev/projects/doctor_appointment/front_doctor_appointment/.dart_tool/flutter_build/06b031587b18f4e1990580d24d2a5afb/native_assets.yaml: 
