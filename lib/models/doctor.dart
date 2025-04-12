@@ -1,14 +1,12 @@
 class Doctor {
   final String id;
-  final String userId;
+  final Map<String, dynamic> userId;
   final String specialization;
   final int experience;
   final double fees;
   final double latitude;
   final double longitude;
   final bool isDoctor;
-  final String? firstname;
-  final String? lastname;
 
   Doctor({
     required this.id,
@@ -19,25 +17,21 @@ class Doctor {
     required this.latitude,
     required this.longitude,
     required this.isDoctor,
-    this.firstname,
-    this.lastname,
   });
 
-  String get name => '${firstname ?? ''} ${lastname ?? ''}'.trim();
+  String get name => '${userId['firstname'] ?? ''} ${userId['lastname'] ?? ''}'.trim();
   String get description => 'Specialization: $specialization\nExperience: $experience years\nFees: \$$fees';
 
   factory Doctor.fromJson(Map<String, dynamic> json) {
     return Doctor(
       id: json['_id'] ?? '',
-      userId: json['userId']['_id'] ?? '',
+      userId: json['userId'] ?? {},
       specialization: json['specialization'] ?? '',
-      experience: json['experience'] ?? 0,
+      experience: json['experience']?.toInt() ?? 0,
       fees: (json['fees'] ?? 0).toDouble(),
       latitude: (json['latitude'] ?? 0).toDouble(),
       longitude: (json['longitude'] ?? 0).toDouble(),
       isDoctor: json['isDoctor'] ?? false,
-      firstname: json['userId']['firstname'],
-      lastname: json['userId']['lastname'],
     );
   }
 }

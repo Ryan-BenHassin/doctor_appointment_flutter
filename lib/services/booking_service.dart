@@ -31,11 +31,17 @@ class BookingService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> fetchUserBookings({required int userID}) async {
-    final data = await _httpClient.get(
-      '$baseUrl/reservations?populate=doctor&filters[user][id][\$eq]=$userID'
-    );
-    return List<Map<String, dynamic>>.from(data['data'] ?? []);
+  Future<List<Map<String, dynamic>>> fetchUserBookings() async {
+    try {
+      final response = await _httpClient.get('$baseUrl/appointment/appointments');
+      if (response is List) {
+        return List<Map<String, dynamic>>.from(response);
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching bookings: $e');
+      return [];
+    }
   }
 
   Future<bool> cancelReservation(String reservationId) async {

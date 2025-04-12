@@ -37,7 +37,7 @@ class _BookingDialogState extends State<BookingDialog> {
 
   Future<void> _loadBookedSlots() async {
     try {
-      _bookedSlots = await _bookingService.fetchDoctorAppointments(widget.doctor.userId);
+      _bookedSlots = await _bookingService.fetchDoctorAppointments(widget.doctor.id);
       setState(() {});
     } catch (e) {
       print('Error loading booked slots: $e');
@@ -169,13 +169,15 @@ class _BookingDialogState extends State<BookingDialog> {
       );
 
       final success = await _bookingService.createReservation(
-        doctorId: widget.doctor.userId,
+        doctorId: widget.doctor.id,
         dateTime: dateTime
       );
 
       if (!mounted) return;
-
-      Navigator.pop(context);
+      
+      // Pop both dialogs
+      Navigator.of(context).pop(); // Pop booking dialog
+      Navigator.of(context).pop(); // Pop map marker dialog
 
       Flushbar(
         message: success ? 'Booking confirmed!' : 'Failed to book. Please try again.',

@@ -8,6 +8,8 @@ class DoctorService {
   Future<List<Doctor>> fetchDoctors() async {
     try {
       final response = await _httpClient.get('$baseUrl/doctor/getalldoctors');
+      // print('Raw doctor response:', response); // Debug log
+      
       if (response is List) {
         return response.map((json) => Doctor.fromJson(json)).toList();
       }

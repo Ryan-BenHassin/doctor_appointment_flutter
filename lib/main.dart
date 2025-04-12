@@ -1,3 +1,4 @@
+import 'package:doctor_appointment/screens/appointments_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'screens/login_screen.dart';
@@ -44,7 +45,7 @@ class _MainScreenState extends State<MainScreen> {
   
   final List<Widget> _screens = [
     MapScreen(),
-    Center(child: Text('Appointments')),
+    AppointmentsScreen(),
     Center(child: Text('Profile')),
   ];
 
