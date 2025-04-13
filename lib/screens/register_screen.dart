@@ -21,7 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       try {
-        final response = await _authService.register(
+        final success = await _authService.register(
           email: _emailController.text,
           password: _passwordController.text,
           firstname: _firstNameController.text,
@@ -32,7 +32,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
         if (!mounted) return;
 
-        if (response.containsKey('token')) {
+        if (success) {
           await _storage.saveUserRole(_selectedRole);
           Navigator.pushReplacementNamed(context, '/login');
           ScaffoldMessenger.of(context).showSnackBar(

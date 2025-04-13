@@ -47,7 +47,7 @@ class AuthService {
     }
   }
 
-  Future<Map<String, dynamic>> register({
+  Future<bool> register({
     required String email,
     required String password,
     required String firstname,
@@ -56,23 +56,23 @@ class AuthService {
     required String role,
   }) async {
     try {
-      final response = await _httpClient.postWithoutAuth(
-        '$baseUrl/user/register',
-        body: {
+      final response = await http.post(
+        Uri.parse('$baseUrl/user/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
           'email': email,
           'password': password,
           'firstname': firstname,
           'lastname': lastname,
           'mobile': mobile,
           'role': role,
-        },
+        }),
       );
-
-      await _saveUserData(response['token']);
-      return response;
+      
+      return response.statusCode == 201;
     } catch (e) {
       print('Registration error: $e');
-      throw Exception('Registration failed: $e');
+      return false;
     }
   }
 
@@ -152,12 +152,32 @@ class AuthService {
   }
 
   Future<User> updateProfile(Map<String, dynamic> userData) async {
-    final response = await _httpClient.put(
-      '$baseUrl/users/${UserProvider.user!.id}',
-      body: userData,
-    );
-    final updatedUser = User.fromJson(response);
-    UserProvider.user = updatedUser;
-    return updatedUser;
+    try {
+      // Remove null values and prepare request body
+      final body = {
+        'firstname': userData['firstname'],
+        'lastname': userData['lastname'],
+        'email': userData['email'],
+        'mobile': userData['mobile'] ?? '',
+        'age': userData['age'] ?? '',
+        'gender': userData['gender'] ?? 'neither',
+        'address': userData['address'] ?? '',
+        'password': userData['password'] ?? '',
+      }..removeWhere((key, value) => value == null);
+
+      print('Update profile request body: $body'); // Debug log
+
+      final response = await _httpClient.put(
+        '$baseUrl/user/updateprofile',
+        body: body,
+      );
+      
+      final updatedUser = User.fromJson(response);
+      UserProvider.user = updatedUser;
+      return updatedUser;
+    } catch (e) {
+      print('Error updating profile: $e');
+      throw Exception('Failed to update profile');
+    }
   }
 }
