@@ -142,10 +142,6 @@ class AuthService {
     return _storage.getAuthToken();
   }
 
-  Future<void> _saveUserData(String token) async {
-    await _storage.saveAuthToken(token);
-  }
-
   Future<bool> isAuthenticated() async {
     final token = await _storage.getAuthToken();
     return token != null && token.isNotEmpty;

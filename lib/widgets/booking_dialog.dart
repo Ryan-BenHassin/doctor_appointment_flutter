@@ -53,9 +53,18 @@ class _BookingDialogState extends State<BookingDialog> {
   }
 
   List<String> _getAvailableTimesForDate(DateTime date) {
-    final allTimes = List.generate(24, (hour) => 
-      '${'$hour'.padLeft(2, '0')}:00'
-    ).where((time) {
+    // Parse doctor's working hours
+    final openTimeParts = widget.doctor.openTime.split(':');
+    final closeTimeParts = widget.doctor.closeTime.split(':');
+    
+    final openHour = int.parse(openTimeParts[0]);
+    final closeHour = int.parse(closeTimeParts[0]);
+
+    // Generate times only within doctor's working hours
+    final allTimes = List.generate(closeHour - openHour + 1, (index) {
+      final hour = openHour + index;
+      return '${hour.toString().padLeft(2, '0')}:00';
+    }).where((time) {
       final [hour, minute] = time.split(':').map(int.parse).toList();
       final dateTime = DateTime(
         date.year, 
@@ -65,7 +74,7 @@ class _BookingDialogState extends State<BookingDialog> {
         minute
       );
       
-      // Check if this time slot is booked
+      // Check if time is within working hours and not booked
       return !_bookedSlots.any((booked) => 
         booked.year == dateTime.year &&
         booked.month == dateTime.month &&

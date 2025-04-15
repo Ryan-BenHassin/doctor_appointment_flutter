@@ -7,6 +7,8 @@ class Doctor {
   final double latitude;
   final double longitude;
   final bool isDoctor;
+  final String openTime;
+  final String closeTime;
 
   Doctor({
     required this.id,
@@ -17,6 +19,8 @@ class Doctor {
     required this.latitude,
     required this.longitude,
     required this.isDoctor,
+    this.openTime = '09:00',  // default value
+    this.closeTime = '17:00', // default value
   });
 
   String get name => '${userId['firstname'] ?? ''} ${userId['lastname'] ?? ''}'.trim();
@@ -32,6 +36,8 @@ class Doctor {
       latitude: (json['latitude'] ?? 0).toDouble(),
       longitude: (json['longitude'] ?? 0).toDouble(),
       isDoctor: json['isDoctor'] ?? false,
+      openTime: json['openTime'] ?? '09:00',
+      closeTime: json['closeTime'] ?? '17:00',
     );
   }
 }
